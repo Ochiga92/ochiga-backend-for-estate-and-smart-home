@@ -1,27 +1,22 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-} from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
 
 @Entity('password_reset_tokens')
 export class PasswordResetToken {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column()
-  userId: string;
+  userId!: string;
 
-  @Column()
-  tokenHash: string;
+  @Column({ type: 'text' })
+  tokenHash!: string;
 
-  @Column({ type: 'datetime' }) // ✅ works with SQLite
-  expiresAt: Date;
+  @CreateDateColumn()
+  createdAt!: Date;
+
+  @Column({ nullable: true })
+  expiresAt!: Date;
 
   @Column({ default: false })
-  used: boolean;
-
-  @CreateDateColumn({ type: 'datetime' })
-  createdAt: Date;
+  used!: boolean;
 }
