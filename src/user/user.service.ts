@@ -1,4 +1,3 @@
-// src/user/user.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -26,7 +25,7 @@ export class UserService {
     return this.create(data);
   }
 
-  // Get one user
+  // Get one user by ID
   async findOne(id: string): Promise<User> {
     const user = await this.userRepo.findOne({
       where: { id },
@@ -37,7 +36,15 @@ export class UserService {
     return user;
   }
 
-  // Alias for controller (getUserById)
+  // ✅ NEW: Find user by ID (for AuthService)
+  async findById(id: string): Promise<User | null> {
+    return this.userRepo.findOne({
+      where: { id },
+      relations: ['wallet', 'payments', 'invitedVisitors', 'homeMembers'],
+    });
+  }
+
+  // Alias for controller
   async getUserById(id: string): Promise<User> {
     return this.findOne(id);
   }
@@ -56,7 +63,7 @@ export class UserService {
     return this.userRepo.save(user);
   }
 
-  // ✅ NEW: Find user by email (used in AuthService)
+  // ✅ Find user by email (used in AuthService)
   async findByEmail(email: string): Promise<User | null> {
     return this.userRepo.findOne({
       where: { email },
