@@ -1,8 +1,6 @@
-// src/auth/dto/auth-response.dto.ts
-import { User } from '../../user/entities/user.entity';
+import { User } from '@prisma/client';
 
-// This strips out the password when sending responses
-export type AuthResponseDto = {
-  user: Omit<User, 'password'>;
-  token: string;
-};
+export class AuthResponseDto {
+  user: Pick<User, 'id' | 'email' | 'role'>;
+  accessToken: string;
+}
