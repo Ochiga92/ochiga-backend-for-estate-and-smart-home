@@ -1,4 +1,8 @@
 export class AuthResponseDto {
-  user: Pick<User, 'id' | 'email' | 'role'>;
-  accessToken: string;
+  user: {
+    id: string;
+    email: string;
+    role: string;
+  };
+  token: string;
 }
