@@ -1,27 +1,22 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-} from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
 
 @Entity('email_verification_tokens')
 export class EmailVerificationToken {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column()
-  userId: string;
+  userId!: string;
 
-  @Column()
-  tokenHash: string;
+  @Column({ type: 'text' })
+  tokenHash!: string;
 
-  @Column({ type: 'datetime' })
-  expiresAt: Date;
+  @CreateDateColumn()
+  createdAt!: Date;
+
+  @Column({ nullable: true })
+  expiresAt!: Date;
 
   @Column({ default: false })
-  used: boolean;
-
-  @CreateDateColumn({ type: 'datetime' })
-  createdAt: Date;
+  used!: boolean;
 }
