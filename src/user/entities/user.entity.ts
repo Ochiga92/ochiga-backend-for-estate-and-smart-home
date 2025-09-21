@@ -1,4 +1,3 @@
-// src/user/entities/user.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -31,6 +30,10 @@ export class User {
 
   @Column({ type: 'text', default: UserRole.RESIDENT })
   role!: UserRole;
+
+  // ✅ New: track email verification
+  @Column({ default: false })
+  verified!: boolean;
 
   @OneToOne(() => Wallet, (wallet) => wallet.user, {
     cascade: true,
