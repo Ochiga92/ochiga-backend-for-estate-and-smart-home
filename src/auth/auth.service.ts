@@ -32,10 +32,10 @@ export class AuthService {
       password: hashed,
     });
 
-    const token = this.generateJwt(user);
+    const accessToken = this.generateJwt(user);
 
     return {
-      token,
+      accessToken,
       user: { id: user.id, email: user.email, role: user.role },
     };
   }
@@ -48,10 +48,10 @@ export class AuthService {
     const valid = await bcrypt.compare(loginDto.password, user.password);
     if (!valid) throw new UnauthorizedException('Invalid credentials');
 
-    const token = this.generateJwt(user);
+    const accessToken = this.generateJwt(user);
 
     return {
-      token,
+      accessToken,
       user: { id: user.id, email: user.email, role: user.role },
     };
   }
