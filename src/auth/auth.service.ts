@@ -58,17 +58,19 @@ export class AuthService {
 
   /** Generate access token */
   public generateJwt(user: User) {
-    return this.jwtService.sign(
-      { id: user.id, email: user.email, role: user.role },
-      {
-        secret:
-          process.env.JWT_ACCESS_SECRET ??
-          process.env.JWT_SECRET ??
-          'defaultSecret',
-        expiresIn: process.env.JWT_ACCESS_EXPIRY ?? '15m',
-      },
-    );
+  const secret = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT secret not set');
   }
+
+  return this.jwtService.sign(
+    { id: user.id, email: user.email, role: user.role },
+    {
+      secret,
+      expiresIn: process.env.JWT_ACCESS_EXPIRY ?? '15m',
+    },
+  );
+}
 
   /** Find user by id (used for refresh) */
   public async findById(id: string): Promise<User | null> {
