@@ -48,7 +48,7 @@ export class AuthController {
       maxAge: 1000 * 60 * 60 * 24 * 30,
     });
 
-    return { token: auth.token, user: auth.user };
+    return { accessToken: auth.accessToken, user: auth.user };
   }
 
   @Public()
@@ -80,7 +80,10 @@ export class AuthController {
       maxAge: 1000 * 60 * 60 * 24 * 30,
     });
 
-    return { token: accessToken, user: { id: user.id, email: user.email, role: user.role } };
+    return {
+      accessToken,
+      user: { id: user.id, email: user.email, role: user.role },
+    };
   }
 
   @ApiBearerAuth('access-token')
