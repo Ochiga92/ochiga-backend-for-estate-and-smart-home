@@ -61,8 +61,11 @@ export class AuthService {
     return this.jwtService.sign(
       { id: user.id, email: user.email, role: user.role },
       {
-        secret: process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET,
-        expiresIn: process.env.JWT_ACCESS_EXPIRY || '15m',
+        secret:
+          process.env.JWT_ACCESS_SECRET ??
+          process.env.JWT_SECRET ??
+          'defaultSecret',
+        expiresIn: process.env.JWT_ACCESS_EXPIRY ?? '15m',
       },
     );
   }
