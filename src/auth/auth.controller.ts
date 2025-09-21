@@ -43,12 +43,17 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res: Response) {
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const auth = await this.authService.login(loginDto);
 
     // ✅ issue refresh token
-    const refresh = await this.tokenService.generateRefreshToken(auth.user.id, 'web');
-
+    const refresh = await this.tokenService.generateRefreshToken(
+      auth.user.id,
+      'web',
+    );
     res.cookie('refreshToken', refresh, this.cookieOptions);
 
     return { accessToken: auth.accessToken, user: auth.user };
@@ -74,7 +79,6 @@ export class AuthController {
     // ✅ always rotate refresh token
     await this.tokenService.revoke(row);
     const newRaw = await this.tokenService.generateRefreshToken(user.id, 'web');
-
     res.cookie('refreshToken', newRaw, this.cookieOptions);
 
     const accessToken = this.authService.generateJwt(user);
