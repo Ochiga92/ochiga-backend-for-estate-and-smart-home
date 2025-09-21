@@ -26,6 +26,13 @@ export class AuthController {
     private readonly tokenService: TokenService,
   ) {}
 
+  private cookieOptions = {
+    httpOnly: true,
+    secure: process.env.COOKIE_SECURE === 'true',
+    sameSite: (process.env.COOKIE_SAME_SITE as any) || 'lax',
+    maxAge: 1000 * 60 * 60 * 24 * 30, // 30d
+  };
+
   @Public()
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
@@ -39,14 +46,10 @@ export class AuthController {
   async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res: Response) {
     const auth = await this.authService.login(loginDto);
 
+    // ✅ issue refresh token
     const refresh = await this.tokenService.generateRefreshToken(auth.user.id, 'web');
 
-    res.cookie('refreshToken', refresh, {
-      httpOnly: true,
-      secure: process.env.COOKIE_SECURE === 'true',
-      sameSite: (process.env.COOKIE_SAME_SITE as any) || 'lax',
-      maxAge: 1000 * 60 * 60 * 24 * 30,
-    });
+    res.cookie('refreshToken', refresh, this.cookieOptions);
 
     return { accessToken: auth.accessToken, user: auth.user };
   }
@@ -68,18 +71,13 @@ export class AuthController {
       return res.status(401).json({ message: 'Invalid token' });
     }
 
-    const accessToken = this.authService.generateJwt(user);
-
+    // ✅ always rotate refresh token
     await this.tokenService.revoke(row);
     const newRaw = await this.tokenService.generateRefreshToken(user.id, 'web');
 
-    res.cookie('refreshToken', newRaw, {
-      httpOnly: true,
-      secure: process.env.COOKIE_SECURE === 'true',
-      sameSite: (process.env.COOKIE_SAME_SITE as any) || 'lax',
-      maxAge: 1000 * 60 * 60 * 24 * 30,
-    });
+    res.cookie('refreshToken', newRaw, this.cookieOptions);
 
+    const accessToken = this.authService.generateJwt(user);
     return {
       accessToken,
       user: { id: user.id, email: user.email, role: user.role },
