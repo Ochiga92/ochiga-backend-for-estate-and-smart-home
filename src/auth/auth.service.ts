@@ -140,8 +140,8 @@ export class AuthService {
     const user = await this.findById(row.userId);
     if (!user) throw new NotFoundException('User not found');
 
-    user.isEmailVerified = true; // ⚡ ensure your User entity has this column
-    await this.userService.update(user);
+    // ✅ use "verified" instead of "isEmailVerified"
+    await this.userService.updateUser(user.id, { verified: true });
 
     return { message: 'Email verified successfully' };
   }
@@ -182,8 +182,8 @@ export class AuthService {
     const user = await this.findById(row.userId);
     if (!user) throw new NotFoundException('User not found');
 
-    user.password = await bcrypt.hash(newPassword, 10);
-    await this.userService.update(user);
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await this.userService.updateUser(user.id, { password: hashed });
 
     row.used = true;
     await this.resetRepo.save(row);
