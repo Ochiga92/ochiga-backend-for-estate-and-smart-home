@@ -140,7 +140,7 @@ export class AuthService {
     const user = await this.findById(row.userId);
     if (!user) throw new NotFoundException('User not found');
 
-    // ✅ use "verified" instead of "isEmailVerified"
+    // ✅ now works with optimized updateUser (void return)
     await this.userService.updateUser(user.id, { verified: true });
 
     return { message: 'Email verified successfully' };
