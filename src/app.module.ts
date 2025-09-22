@@ -16,10 +16,12 @@ import { VisitorsModule } from './visitors/visitors.module';
 import { PaymentsModule } from './payments/payments.module';
 import { UtilitiesModule } from './utilities/utilities.module';
 import { CommunityModule } from './community/community.module';
-import { NotificationsModule } from './notifications/notifications.module'; // ✅ new import
+import { NotificationsModule } from './notifications/notifications.module';
 
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RolesGuard } from './auth/roles.guard';
+
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -39,7 +41,7 @@ import { RolesGuard } from './auth/roles.guard';
             username: config.get<string>('DB_USERNAME', 'postgres'),
             password: config.get<string>('DB_PASSWORD', 'postgres'),
             database: config.get<string>('DB_DATABASE', 'estate_app'),
-            entities: [path.join(__dirname, '**', '*.entity.{ts,js}')], // ✅ auto-load entities
+            entities: [path.join(__dirname, '**', '*.entity.{ts,js}')],
             synchronize: true,
           };
         }
@@ -52,11 +54,20 @@ import { RolesGuard } from './auth/roles.guard';
             '..',
             config.get<string>('DB_DATABASE', 'db.sqlite'),
           ),
-          entities: [path.join(__dirname, '**', '*.entity.{ts,js}')], // ✅ auto-load entities
+          entities: [path.join(__dirname, '**', '*.entity.{ts,js}')],
           synchronize: true,
         };
       },
     }),
+
+    // ✅ Throttler configuration
+    ThrottlerModule.forRoot([
+      {
+        name: 'short', // throttler key
+        ttl: 60,       // 60 seconds window
+        limit: 5,      // max 5 requests per window
+      },
+    ]),
 
     // Feature modules
     AuthModule,
@@ -70,9 +81,13 @@ import { RolesGuard } from './auth/roles.guard';
     PaymentsModule,
     UtilitiesModule,
     CommunityModule,
-    NotificationsModule, // ✅ now wired in
+    NotificationsModule,
   ],
   providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard, // ✅ apply globally
+    },
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
