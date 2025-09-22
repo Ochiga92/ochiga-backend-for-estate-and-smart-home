@@ -8,11 +8,18 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { UserModule } from '../user/user.module';
 import { TokenService } from './token.service';
+
 import { RefreshToken } from './entities/refresh-token.entity';
+import { EmailVerificationToken } from './entities/email-verification-token.entity';
+import { PasswordResetToken } from './entities/password-reset-token.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([RefreshToken]),
+    TypeOrmModule.forFeature([
+      RefreshToken,
+      EmailVerificationToken,   // ✅ added
+      PasswordResetToken,       // ✅ added
+    ]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({
       global: true,
