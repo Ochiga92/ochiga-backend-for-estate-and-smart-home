@@ -20,7 +20,6 @@ export class UserService {
     return this.userRepo.save(newUser);
   }
 
-  // Alias for controller (createUser)
   async createUser(data: Partial<User>): Promise<User> {
     return this.create(data);
   }
@@ -31,12 +30,10 @@ export class UserService {
       where: { id },
       relations: ['wallet', 'payments', 'invitedVisitors', 'homeMembers'],
     });
-
     if (!user) throw new NotFoundException(`User with ID ${id} not found`);
     return user;
   }
 
-  // ✅ NEW: Find user by ID (for AuthService)
   async findById(id: string): Promise<User | null> {
     return this.userRepo.findOne({
       where: { id },
@@ -44,26 +41,21 @@ export class UserService {
     });
   }
 
-  // Alias for controller
   async getUserById(id: string): Promise<User> {
     return this.findOne(id);
   }
 
-  // ✅ Get all users
   async getAllUsers(): Promise<User[]> {
     return this.userRepo.find({
       relations: ['wallet', 'payments', 'invitedVisitors', 'homeMembers'],
     });
   }
 
-  // Update user
-  async updateUser(id: string, updateData: Partial<User>): Promise<User> {
-    const user = await this.findOne(id);
-    Object.assign(user, updateData);
-    return this.userRepo.save(user);
+  // ✅ Optimized Update (direct SQL update, no fetch)
+  async updateUser(id: string, updateData: Partial<User>): Promise<void> {
+    await this.userRepo.update(id, updateData);
   }
 
-  // ✅ Find user by email (used in AuthService)
   async findByEmail(email: string): Promise<User | null> {
     return this.userRepo.findOne({
       where: { email },
