@@ -6,9 +6,9 @@ import {
   ManyToOne,
   CreateDateColumn,
   UpdateDateColumn,
-  JoinColumn,   // 👈 must be here
+  JoinColumn,
 } from 'typeorm';
-import { User } from '../../user/entities/user.entity';  // 👈 make sure this path is correct
+import { User } from '../../user/entities/user.entity';
 
 @Entity('visitors')
 export class Visitor {
@@ -28,7 +28,7 @@ export class Visitor {
   status!: string;
 
   @Column({ unique: true })
-  code!: string;
+  code!: string; // auto-generated short code
 
   @ManyToOne(() => User, (user) => user.invitedVisitors, {
     eager: true,
@@ -37,7 +37,6 @@ export class Visitor {
   @JoinColumn({ name: 'invitedById' })
   invitedBy!: User;
 
-  // ✅ Add this back
   @Column({ nullable: true })
   invitedById?: string;
 
