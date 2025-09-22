@@ -51,9 +51,11 @@ export class UserService {
     });
   }
 
-  // ✅ Optimized Update (direct SQL update, no fetch)
-  async updateUser(id: string, updateData: Partial<User>): Promise<void> {
-    await this.userRepo.update(id, updateData);
+  // ✅ Update user and return the updated record
+  async updateUser(id: string, updateData: Partial<User>): Promise<User> {
+    const user = await this.findOne(id);
+    Object.assign(user, updateData);
+    return this.userRepo.save(user);
   }
 
   async findByEmail(email: string): Promise<User | null> {
