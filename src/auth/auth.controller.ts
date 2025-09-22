@@ -1,4 +1,3 @@
-// src/auth/auth.controller.ts
 import {
   Controller,
   Post,
@@ -49,14 +48,11 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const auth = await this.authService.login(loginDto);
-
-    // ✅ issue refresh token
     const refresh = await this.tokenService.generateRefreshToken(
       auth.user.id,
       'web',
     );
     res.cookie('refreshToken', refresh, this.cookieOptions);
-
     return { accessToken: auth.accessToken, user: auth.user };
   }
 
@@ -77,7 +73,6 @@ export class AuthController {
       return res.status(401).json({ message: 'Invalid token' });
     }
 
-    // ✅ always rotate refresh token
     await this.tokenService.revoke(row);
     const newRaw = await this.tokenService.generateRefreshToken(user.id, 'web');
     res.cookie('refreshToken', newRaw, this.cookieOptions);
@@ -101,5 +96,33 @@ export class AuthController {
     }
     res.clearCookie('refreshToken');
     return { message: 'Logout successful' };
+  }
+
+  // -----------------------------
+  // Email Verification
+  // -----------------------------
+  @Public()
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  async verifyEmail(@Body('token') token: string) {
+    return this.authService.verifyEmail(token);
+  }
+
+  // -----------------------------
+  // Password Reset
+  // -----------------------------
+  @Public()
+  @Post('request-reset')
+  @HttpCode(HttpStatus.OK)
+  async requestReset(@Body('email') email: string) {
+    await this.authService.requestPasswordReset(email);
+    return { message: 'If that email exists, a reset link has been sent' };
+  }
+
+  @Public()
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() body: { token: string; newPassword: string }) {
+    return this.authService.resetPassword(body.token, body.newPassword);
   }
 }
