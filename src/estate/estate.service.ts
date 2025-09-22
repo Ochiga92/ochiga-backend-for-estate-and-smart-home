@@ -1,3 +1,4 @@
+// src/estate/estate.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -12,36 +13,39 @@ export class EstateService {
     private readonly estateRepository: Repository<Estate>,
   ) {}
 
-  // Create a new estate
   async create(createEstateDto: CreateEstateDto): Promise<Estate> {
     const estate = this.estateRepository.create(createEstateDto);
     return await this.estateRepository.save(estate);
   }
 
-  // Get all estates
-  async findAll(): Promise<Estate[]> {
-    return await this.estateRepository.find();
+  async findAll(skip = 0, take = 10): Promise<Estate[]> {
+    return await this.estateRepository.find({
+      skip,
+      take,
+      relations: ['homes'],
+      order: { createdAt: 'DESC' },
+    });
   }
 
-  // Get one estate by ID
   async findOne(id: string): Promise<Estate> {
-    const estate = await this.estateRepository.findOne({ where: { id } });
+    const estate = await this.estateRepository.findOne({
+      where: { id },
+      relations: ['homes'],
+    });
     if (!estate) {
       throw new NotFoundException(`Estate with ID ${id} not found`);
     }
     return estate;
   }
 
-  // Update estate by ID
   async update(id: string, updateEstateDto: UpdateEstateDto): Promise<Estate> {
     const estate = await this.findOne(id);
     Object.assign(estate, updateEstateDto);
     return await this.estateRepository.save(estate);
   }
 
-  // Remove estate by ID
   async remove(id: string): Promise<void> {
     const estate = await this.findOne(id);
-    await this.estateRepository.remove(estate);
+    await this.estateRepository.softRemove(estate); // ✅ soft delete
   }
 }
