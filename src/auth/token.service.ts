@@ -32,7 +32,12 @@ export class TokenService {
     }
   }
 
-  private async generateToken(repo: Repository<any>, userId: string, expiry: string, deviceInfo?: string) {
+  private async generateToken<T>(
+    repo: Repository<T>,
+    userId: string,
+    expiry: string,
+    extras: Partial<T> = {},
+  ) {
     const raw = crypto.randomBytes(64).toString('hex');
     const hash = await bcrypt.hash(raw, 10);
     const expiresAt = new Date(Date.now() + this.parseExpiryMs(expiry));
@@ -41,54 +46,77 @@ export class TokenService {
       userId,
       tokenHash: hash,
       expiresAt,
-      used: false,
-      revoked: false,
-      deviceInfo,
-    });
+      ...extras,
+    } as any);
     await repo.save(row);
     return raw;
   }
 
-  private async validateToken(repo: Repository<any>, raw: string) {
-    const rows = await repo.find({ where: { used: false } });
-    for (const r of rows) {
+  private async validateToken<T>(
+    repo: Repository<T>,
+    raw: string,
+    extraWhere: any = {},
+  ): Promise<T | null> {
+    const rows = await repo.find({ where: extraWhere });
+    for (const r of rows as any[]) {
       const ok = await bcrypt.compare(raw, r.tokenHash);
-      if (ok && (!r.expiresAt || r.expiresAt > new Date())) return r;
+      if (ok && (!r.expiresAt || r.expiresAt > new Date())) return r as T;
     }
     return null;
   }
 
-  /** Refresh Tokens */
+  /** 🔄 Refresh Tokens */
   async generateRefreshToken(userId: string, deviceInfo?: string) {
-    return this.generateToken(this.rtRepo, userId, process.env.JWT_REFRESH_EXPIRY || '30d', deviceInfo);
+    return this.generateToken(
+      this.rtRepo,
+      userId,
+      process.env.JWT_REFRESH_EXPIRY || '30d',
+      { revoked: false, deviceInfo } as any,
+    );
   }
+
   async validateRefreshTokenByRaw(raw: string) {
-    return this.validateToken(this.rtRepo, raw);
+    return this.validateToken(this.rtRepo, raw, { revoked: false });
   }
+
   async revoke(rt: RefreshToken) {
     rt.revoked = true;
     await this.rtRepo.save(rt);
   }
 
-  /** Email Verification Tokens */
+  /** 📧 Email Verification Tokens */
   async generateEmailVerificationToken(userId: string) {
-    return this.generateToken(this.evRepo, userId, process.env.EMAIL_VERIFICATION_EXPIRY || '1d');
+    return this.generateToken(
+      this.evRepo,
+      userId,
+      process.env.EMAIL_VERIFICATION_EXPIRY || '1d',
+      { used: false } as any,
+    );
   }
+
   async validateEmailVerificationToken(raw: string) {
-    return this.validateToken(this.evRepo, raw);
+    return this.validateToken(this.evRepo, raw, { used: false });
   }
+
   async markEmailVerificationUsed(token: EmailVerificationToken) {
     token.used = true;
     await this.evRepo.save(token);
   }
 
-  /** Password Reset Tokens */
+  /** 🔑 Password Reset Tokens */
   async generatePasswordResetToken(userId: string) {
-    return this.generateToken(this.prRepo, userId, process.env.PASSWORD_RESET_EXPIRY || '1h');
+    return this.generateToken(
+      this.prRepo,
+      userId,
+      process.env.PASSWORD_RESET_EXPIRY || '1h',
+      { used: false } as any,
+    );
   }
+
   async validatePasswordResetToken(raw: string) {
-    return this.validateToken(this.prRepo, raw);
+    return this.validateToken(this.prRepo, raw, { used: false });
   }
+
   async markPasswordResetUsed(token: PasswordResetToken) {
     token.used = true;
     await this.prRepo.save(token);
