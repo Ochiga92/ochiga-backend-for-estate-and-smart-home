@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import * as crypto from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ObjectLiteral } from 'typeorm';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { EmailVerificationToken } from './entities/email-verification-token.entity';
 import { PasswordResetToken } from './entities/password-reset-token.entity';
@@ -32,7 +32,7 @@ export class TokenService {
     }
   }
 
-  private async generateToken<T>(
+  private async generateToken<T extends ObjectLiteral>(
     repo: Repository<T>,
     userId: string,
     expiry: string,
@@ -52,7 +52,7 @@ export class TokenService {
     return raw;
   }
 
-  private async validateToken<T>(
+  private async validateToken<T extends ObjectLiteral>(
     repo: Repository<T>,
     raw: string,
     extraWhere: any = {},
