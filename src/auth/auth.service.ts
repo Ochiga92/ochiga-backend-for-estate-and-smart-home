@@ -43,10 +43,22 @@ export class AuthService {
   /** Login an existing user */
   async login(loginDto: LoginDto): Promise<AuthResponseDto> {
     const user = await this.userService.findByEmail(loginDto.email);
-    if (!user) throw new UnauthorizedException('Invalid credentials');
+    if (!user) {
+      console.warn(
+        `⚠️ Login failed → email=${loginDto.email}, reason=user_not_found`,
+      );
+      throw new UnauthorizedException('Invalid credentials');
+    }
 
     const valid = await bcrypt.compare(loginDto.password, user.password);
-    if (!valid) throw new UnauthorizedException('Invalid credentials');
+    if (!valid) {
+      console.warn(
+        `⚠️ Login failed → email=${loginDto.email}, reason=bad_password`,
+      );
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    console.log(`✅ Login success → user=${user.email} role=${user.role}`);
 
     const accessToken = this.generateJwt(user);
 
@@ -58,19 +70,19 @@ export class AuthService {
 
   /** Generate access token */
   public generateJwt(user: User) {
-  const secret = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET;
-  if (!secret) {
-    throw new Error('JWT secret not set');
-  }
+    const secret = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT secret not set');
+    }
 
-  return this.jwtService.sign(
-    { id: user.id, email: user.email, role: user.role },
-    {
-      secret,
-      expiresIn: process.env.JWT_ACCESS_EXPIRY ?? '15m',
-    },
-  );
-}
+    return this.jwtService.sign(
+      { id: user.id, email: user.email, role: user.role },
+      {
+        secret,
+        expiresIn: process.env.JWT_ACCESS_EXPIRY ?? '15m',
+      },
+    );
+  }
 
   /** Find user by id (used for refresh) */
   public async findById(id: string): Promise<User | null> {
