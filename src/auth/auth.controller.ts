@@ -17,6 +17,7 @@ import { Public } from './decorators/public.decorator';
 import { TokenService } from './token.service';
 import { Response, Request } from 'express';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { Throttle } from '@nestjs/throttler'; // ✅ added
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -42,6 +43,7 @@ export class AuthController {
 
   @Public()
   @Post('login')
+  @Throttle(5, 60) // ✅ max 5 login attempts per 60s
   @HttpCode(HttpStatus.OK)
   async login(
     @Body() loginDto: LoginDto,
