@@ -1,101 +1,107 @@
-// src/app.module.ts
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
-import * as path from 'path';
+// src/auth/auth.controller.ts
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Res,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { AuthService } from './auth.service';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
+import { AuthResponseDto } from './dto/auth-response.dto';
+import { Public } from './decorators/public.decorator';
+import { TokenService } from './token.service';
+import { Response, Request } from 'express';
+import { JwtAuthGuard } from './jwt-auth.guard';
+import { Throttle } from '@nestjs/throttler';
 
-import { AuthModule } from './auth/auth.module';
-import { DashboardModule } from './dashboard/dashboard.module';
-import { UserModule } from './user/user.module';
-import { EstateModule } from './estate/estate.module';
-import { HomeModule } from './home/home.module';
-import { RoomModule } from './room/room.module';
-import { WalletModule } from './wallet/wallet.module';
-import { VisitorsModule } from './visitors/visitors.module';
-import { PaymentsModule } from './payments/payments.module';
-import { UtilitiesModule } from './utilities/utilities.module';
-import { CommunityModule } from './community/community.module';
-import { NotificationsModule } from './notifications/notifications.module';
+@ApiTags('Auth')
+@Controller('auth')
+export class AuthController {
+  constructor(
+    private readonly authService: AuthService,
+    private readonly tokenService: TokenService,
+  ) {}
 
-import { JwtAuthGuard } from './auth/jwt-auth.guard';
-import { RolesGuard } from './auth/roles.guard';
+  private cookieOptions = {
+    httpOnly: true,
+    secure: process.env.COOKIE_SECURE === 'true',
+    sameSite: (process.env.COOKIE_SAME_SITE as any) || 'lax',
+    maxAge: 1000 * 60 * 60 * 24 * 30, // 30d
+  };
 
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+  @Public()
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  async register(@Body() registerDto: RegisterDto): Promise<AuthResponseDto> {
+    return this.authService.register(registerDto);
+  }
 
-@Module({
-  imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+  @Public()
+  @Post('login')
+  @Throttle('short') // ✅ max 5 login attempts per 60s
+  @HttpCode(HttpStatus.OK)
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const auth = await this.authService.login(loginDto);
 
-    TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: async (config: ConfigService) => {
-        const dbType = config.get<string>('DB_TYPE', 'better-sqlite3');
+    // ✅ issue refresh token
+    const refresh = await this.tokenService.generateRefreshToken(
+      auth.user.id,
+      'web',
+    );
+    res.cookie('refreshToken', refresh, this.cookieOptions);
 
-        if (dbType === 'postgres') {
-          return {
-            type: 'postgres' as const,
-            host: config.get<string>('DB_HOST', 'localhost'),
-            port: parseInt(config.get<string>('DB_PORT', '5432'), 10),
-            username: config.get<string>('DB_USERNAME', 'postgres'),
-            password: config.get<string>('DB_PASSWORD', 'postgres'),
-            database: config.get<string>('DB_DATABASE', 'estate_app'),
-            entities: [path.join(__dirname, '**', '*.entity.{ts,js}')],
-            synchronize: true,
-          };
-        }
+    return { accessToken: auth.accessToken, user: auth.user };
+  }
 
-        // Default: better-sqlite3 for dev/local
-        return {
-          type: 'better-sqlite3' as const,
-          database: path.resolve(
-            __dirname,
-            '..',
-            config.get<string>('DB_DATABASE', 'db.sqlite'),
-          ),
-          entities: [path.join(__dirname, '**', '*.entity.{ts,js}')],
-          synchronize: true,
-        };
-      },
-    }),
+  @Public()
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const raw = req.cookies?.refreshToken;
+    if (!raw) return res.status(401).json({ message: 'No refresh token' });
 
-    // ✅ Throttler configuration
-    ThrottlerModule.forRoot([
-      {
-        name: 'short', // throttler key
-        ttl: 60,       // 60 seconds window
-        limit: 5,      // max 5 requests per window
-      },
-    ]),
+    const row = await this.tokenService.validateRefreshTokenByRaw(raw);
+    if (!row) return res.status(401).json({ message: 'Invalid refresh token' });
 
-    // Feature modules
-    AuthModule,
-    DashboardModule,
-    UserModule,
-    EstateModule,
-    HomeModule,
-    RoomModule,
-    WalletModule,
-    VisitorsModule,
-    PaymentsModule,
-    UtilitiesModule,
-    CommunityModule,
-    NotificationsModule,
-  ],
-  providers: [
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard, // ✅ apply globally
-    },
-    {
-      provide: APP_GUARD,
-      useClass: JwtAuthGuard,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: RolesGuard,
-    },
-  ],
-})
-export class AppModule {}
+    const user = await this.authService.findById(row.userId);
+    if (!user) {
+      await this.tokenService.revoke(row);
+      res.clearCookie('refreshToken');
+      return res.status(401).json({ message: 'Invalid token' });
+    }
+
+    // ✅ always rotate refresh token
+    await this.tokenService.revoke(row);
+    const newRaw = await this.tokenService.generateRefreshToken(user.id, 'web');
+    res.cookie('refreshToken', newRaw, this.cookieOptions);
+
+    const accessToken = this.authService.generateJwt(user);
+    return {
+      accessToken,
+      user: { id: user.id, email: user.email, role: user.role },
+    };
+  }
+
+  @ApiBearerAuth('access-token')
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const raw = req.cookies?.refreshToken;
+    if (raw) {
+      const row = await this.tokenService.validateRefreshTokenByRaw(raw);
+      if (row) await this.tokenService.revoke(row);
+    }
+    res.clearCookie('refreshToken');
+    return { message: 'Logout successful' };
+  }
+}
