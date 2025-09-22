@@ -17,8 +17,8 @@ import { PasswordResetToken } from './entities/password-reset-token.entity';
   imports: [
     TypeOrmModule.forFeature([
       RefreshToken,
-      EmailVerificationToken,   // ✅ added
-      PasswordResetToken,       // ✅ added
+      EmailVerificationToken,
+      PasswordResetToken,
     ]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({
