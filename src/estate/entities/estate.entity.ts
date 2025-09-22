@@ -6,6 +6,8 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  DeleteDateColumn,
+  Index,
 } from 'typeorm';
 import { Home } from '../../home/entities/home.entity';
 
@@ -17,6 +19,7 @@ export class Estate {
   @Column({ unique: true })
   name!: string;
 
+  @Index()
   @Column()
   location!: string;
 
@@ -41,7 +44,7 @@ export class Estate {
   @Column({ type: 'text', nullable: true })
   settings?: string;
 
-  @OneToMany(() => Home, (home) => home.estate)
+  @OneToMany(() => Home, (home) => home.estate, { cascade: true })
   homes!: Home[];
 
   @CreateDateColumn()
@@ -49,4 +52,7 @@ export class Estate {
 
   @UpdateDateColumn()
   updatedAt!: Date;
+
+  @DeleteDateColumn()
+  deletedAt?: Date; // ✅ Soft delete
 }
