@@ -20,7 +20,6 @@ import { NotificationsModule } from './notifications/notifications.module';
 
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RolesGuard } from './auth/roles.guard';
-
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 
 @Module({
@@ -46,7 +45,6 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
           };
         }
 
-        // Default: better-sqlite3 for dev/local
         return {
           type: 'better-sqlite3' as const,
           database: path.resolve(
@@ -63,9 +61,9 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
     // ✅ Throttler configuration
     ThrottlerModule.forRoot([
       {
-        name: 'short', // throttler key
-        ttl: 60,       // 60 seconds window
-        limit: 5,      // max 5 requests per window
+        name: 'short',
+        ttl: 60,
+        limit: 5,
       },
     ]),
 
@@ -84,9 +82,10 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
     NotificationsModule,
   ],
   providers: [
+    // ✅ Register all global guards properly
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard, // ✅ apply globally
+      useClass: ThrottlerGuard,
     },
     {
       provide: APP_GUARD,
