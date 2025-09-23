@@ -5,12 +5,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { UserRole } from '../enums/user-role.enum';
 import { ControlDeviceDto } from './dto/control-device.dto';
 import { CreateDeviceDto } from './dto/create-device.dto';
 import { Device } from './entities/device.entity';
 import { DeviceLog } from './entities/device-log.entity';
+import { IotGateway } from './iot.gateway';
 
 @Injectable()
 export class IotService {
@@ -20,6 +21,9 @@ export class IotService {
 
     @InjectRepository(DeviceLog)
     private readonly logRepo: Repository<DeviceLog>,
+
+    private readonly dataSource: DataSource,
+    private readonly iotGateway: IotGateway,
   ) {}
 
   async findUserDevices(userId: string) {
@@ -45,9 +49,16 @@ export class IotService {
     const device = this.deviceRepo.create({
       ...dto,
       owner: dto.isEstateLevel ? null : ({ id: userId } as any),
+      metadata: dto?.['metadata']
+        ? JSON.stringify(dto['metadata'])
+        : null,
     });
 
-    return this.deviceRepo.save(device);
+    const saved = await this.deviceRepo.save(device);
+
+    this.iotGateway.notifyDeviceUpdate(saved);
+
+    return saved;
   }
 
   async controlDevice(
@@ -56,47 +67,55 @@ export class IotService {
     deviceId: string,
     dto: ControlDeviceDto,
   ) {
-    const device = await this.deviceRepo.findOne({
-      where: { id: deviceId },
-      relations: ['owner'],
+    return this.dataSource.transaction(async (manager) => {
+      const device = await manager.findOne(Device, {
+        where: { id: deviceId },
+        relations: ['owner'],
+      });
+
+      if (!device) {
+        throw new NotFoundException('Device not found');
+      }
+
+      if (device.isEstateLevel && role !== UserRole.MANAGER) {
+        throw new ForbiddenException(
+          'Only managers can control estate-level devices',
+        );
+      }
+      if (!device.isEstateLevel && (!device.owner || device.owner.id !== userId)) {
+        throw new ForbiddenException('You can only control your own devices');
+      }
+
+      // ✅ Apply control
+      if (dto.action === 'on') device.isOn = true;
+      if (dto.action === 'off') device.isOn = false;
+      if (dto.action === 'set-temp') {
+        const metadata = device.metadata ? JSON.parse(device.metadata) : {};
+        metadata.temp = dto.value;
+        device.metadata = JSON.stringify(metadata);
+      }
+
+      await manager.save(Device, device);
+
+      // ✅ Log action
+      const log = manager.create(DeviceLog, {
+        device: { id: device.id } as Device,
+        action: dto.action,
+        details:
+          dto.value !== undefined ? JSON.stringify(dto.value) : undefined,
+      });
+      await manager.save(DeviceLog, log);
+
+      // ✅ Real-time notification
+      this.iotGateway.notifyDeviceUpdate(device);
+
+      return {
+        id: device.id,
+        name: device.name,
+        isOn: device.isOn,
+        metadata: device.metadata ? JSON.parse(device.metadata) : {},
+      };
     });
-
-    if (!device) {
-      throw new NotFoundException('Device not found');
-    }
-
-    if (device.isEstateLevel && role !== UserRole.MANAGER) {
-      throw new ForbiddenException(
-        'Only managers can control estate-level devices',
-      );
-    }
-    if (!device.isEstateLevel && (!device.owner || device.owner.id !== userId)) {
-      throw new ForbiddenException('You can only control your own devices');
-    }
-
-    if (dto.action === 'on') device.isOn = true;
-    if (dto.action === 'off') device.isOn = false;
-    if (dto.action === 'set-temp') {
-      const metadata = device.metadata ? JSON.parse(device.metadata) : {};
-      metadata.temp = dto.value;
-      device.metadata = JSON.stringify(metadata);
-    }
-
-    await this.deviceRepo.save(device);
-
-    const log = this.logRepo.create({
-      device: { id: device.id } as Device,
-      action: dto.action,
-      details: dto.value !== undefined ? JSON.stringify(dto.value) : undefined,
-    });
-    await this.logRepo.save(log);
-
-    return {
-      id: device.id,
-      name: device.name,
-      isOn: device.isOn,
-      metadata: device.metadata ? JSON.parse(device.metadata) : {},
-    };
   }
 
   async getDeviceLogs(userId: string, role: UserRole, deviceId: string) {
@@ -118,7 +137,7 @@ export class IotService {
 
     return this.logRepo.find({
       where: { device: { id: deviceId } },
-      order: { createdAt: 'DESC' }, // ✅ fixed (was "timestamp")
+      order: { createdAt: 'DESC' },
     });
   }
 }
