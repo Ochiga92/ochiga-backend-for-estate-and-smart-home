@@ -17,6 +17,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { UtilitiesModule } from './utilities/utilities.module';
 import { CommunityModule } from './community/community.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { IotModule } from './iot/iot.module';
 
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RolesGuard } from './auth/roles.guard';
@@ -41,7 +42,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
             password: config.get<string>('DB_PASSWORD', 'postgres'),
             database: config.get<string>('DB_DATABASE', 'estate_app'),
             entities: [path.join(__dirname, '**', '*.entity.{ts,js}')],
-            synchronize: true,
+            synchronize: true, // ⚠️ Disable in production
           };
         }
 
@@ -53,12 +54,12 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
             config.get<string>('DB_DATABASE', 'db.sqlite'),
           ),
           entities: [path.join(__dirname, '**', '*.entity.{ts,js}')],
-          synchronize: true,
+          synchronize: true, // ⚠️ Disable in production
         };
       },
     }),
 
-    // ✅ Throttler configuration
+    // ✅ Rate limiting
     ThrottlerModule.forRoot([
       {
         name: 'short',
@@ -80,9 +81,9 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
     UtilitiesModule,
     CommunityModule,
     NotificationsModule,
+    IotModule, // ✅ IoT plugged in here
   ],
   providers: [
-    // ✅ Register all global guards properly
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
