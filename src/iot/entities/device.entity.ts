@@ -6,6 +6,8 @@ import {
   ManyToOne,
   OneToMany,
   CreateDateColumn,
+  UpdateDateColumn,
+  Index,
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { DeviceLog } from './device-log.entity';
@@ -15,6 +17,7 @@ export class Device {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
+  @Index() // ✅ improves search/filter performance
   @Column()
   name!: string; // e.g. "Living Room Light" or "Main Gate"
 
@@ -24,15 +27,15 @@ export class Device {
   @Column({ default: false })
   isOn!: boolean;
 
-  // ✅ Reverted: store as plain string
-  @Column({ nullable: true })
-  metadata!: string; // JSON string, manual parse/stringify in service
+  // ✅ Store JSON metadata as string for flexibility
+  @Column({ type: 'text', nullable: true })
+  metadata!: string | null;
 
   @ManyToOne(() => User, (user: User) => user.devices, {
     nullable: true,
     onDelete: 'CASCADE',
   })
-  owner?: User;
+  owner: User | null;
 
   @OneToMany(() => DeviceLog, (log) => log.device, { cascade: true })
   logs!: DeviceLog[];
@@ -42,4 +45,7 @@ export class Device {
 
   @CreateDateColumn()
   createdAt!: Date;
+
+  @UpdateDateColumn()
+  updatedAt!: Date; // ✅ auto-track changes
 }
