@@ -10,7 +10,7 @@ import { IotGateway } from './iot.gateway';
 @Module({
   imports: [TypeOrmModule.forFeature([Device, DeviceLog])],
   controllers: [IotController],
-  providers: [IotService, IotGateway], // ✅ Register both service + gateway
-  exports: [IotService, IotGateway],   // ✅ Allow usage in other modules if needed
+  providers: [IotService, IotGateway],
+  exports: [IotService], // ✅ Only service is exported for use in other modules
 })
 export class IotModule {}
