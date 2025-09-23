@@ -12,6 +12,7 @@ import { CreateDeviceDto } from './dto/create-device.dto';
 import { Device } from './entities/device.entity';
 import { DeviceLog } from './entities/device-log.entity';
 import { IotGateway } from './iot.gateway';
+import { User } from '../user/entities/user.entity'; // ✅ Import User
 
 @Injectable()
 export class IotService {
@@ -46,9 +47,17 @@ export class IotService {
       );
     }
 
+    let owner: User | null = null;
+    if (!dto.isEstateLevel) {
+      owner = await this.dataSource.getRepository(User).findOneBy({ id: userId });
+      if (!owner) {
+        throw new NotFoundException(`User with ID ${userId} not found`);
+      }
+    }
+
     const device = this.deviceRepo.create({
       ...dto,
-      owner: dto.isEstateLevel ? null : ({ id: userId } as any),
+      owner,
       metadata: dto?.['metadata']
         ? JSON.stringify(dto['metadata'])
         : null,
