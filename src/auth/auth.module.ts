@@ -1,3 +1,4 @@
+// src/auth/auth.module.ts
 import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
@@ -16,8 +17,8 @@ import { RefreshToken } from './entities/refresh-token.entity';
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({
       global: true,
-      secret: process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET,
-      signOptions: { expiresIn: (process.env.JWT_ACCESS_EXPIRY as any) || '15m' },
+      secret: process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET || 'supersecret',
+      signOptions: { expiresIn: process.env.JWT_ACCESS_EXPIRY || '15m' },
     }),
     UserModule,
   ],
