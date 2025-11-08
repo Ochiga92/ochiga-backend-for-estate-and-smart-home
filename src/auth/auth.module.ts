@@ -1,6 +1,5 @@
-// src/auth/auth.module.ts
 import { Module } from '@nestjs/common';
-import { PassportModule } from '@nestjs/passport';
+import { PassportModule } from '@nestjs/passport'; // ✅ Correct spelling
 import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
@@ -18,7 +17,7 @@ import { RefreshToken } from './entities/refresh-token.entity';
     JwtModule.register({
       global: true,
       secret: process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET || 'supersecret',
-      signOptions: { expiresIn: (process.env.JWT_ACCESS_EXPIRY as string) || '15m' },
+      signOptions: { expiresIn: (process.env.JWT_ACCESS_EXPIRY as any) || '15m' }, // ✅ Cast fixed
     }),
     UserModule,
   ],
