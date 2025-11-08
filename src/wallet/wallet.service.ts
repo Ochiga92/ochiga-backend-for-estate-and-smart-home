@@ -1,10 +1,10 @@
-// src/wallet/wallet.service.ts
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Wallet } from './entities/wallet.entity';
 import { User } from '../user/entities/user.entity';
 import { Transaction, TransactionType } from './entities/transaction.entity';
+import { AiAgent } from '../ai/ai.agent';
 
 @Injectable()
 export class WalletService {
@@ -12,6 +12,7 @@ export class WalletService {
     @InjectRepository(Wallet) private walletRepo: Repository<Wallet>,
     @InjectRepository(User) private userRepo: Repository<User>,
     @InjectRepository(Transaction) private txRepo: Repository<Transaction>,
+    private readonly aiAgent: AiAgent, // 🧠 Injected AI brain
   ) {}
 
   /** 🔹 Get wallet by user ID */
@@ -31,7 +32,7 @@ export class WalletService {
     if (!user) throw new NotFoundException('User not found');
 
     let wallet = await this.walletRepo.findOne({ where: { user: { id: userId } } });
-    if (wallet) return wallet; // ✅ don’t duplicate
+    if (wallet) return wallet;
 
     wallet = this.walletRepo.create({
       user,
@@ -50,7 +51,7 @@ export class WalletService {
     wallet.balance = Number(wallet.balance) + amount;
 
     const tx = this.txRepo.create({
-      type: TransactionType.FUND, // ✅ enum
+      type: TransactionType.FUND,
       amount,
       description: 'Wallet funded',
       wallet,
@@ -72,7 +73,7 @@ export class WalletService {
     wallet.balance = Number(wallet.balance) - amount;
 
     const tx = this.txRepo.create({
-      type: TransactionType.DEBIT, // ✅ enum
+      type: TransactionType.DEBIT,
       amount,
       description: 'Wallet debited',
       wallet,
@@ -104,5 +105,32 @@ export class WalletService {
     }
 
     return wallet;
+  }
+
+  /** 🔹 Get user wallet balance only (for Assistant integration) */
+  async getBalance(userId: string): Promise<{ balance: number; currency: string }> {
+    const wallet = await this.walletRepo.findOne({
+      where: { user: { id: userId } },
+      relations: ['user'],
+    });
+    if (!wallet) throw new NotFoundException('Wallet not found');
+
+    return { balance: wallet.balance, currency: wallet.currency };
+  }
+
+  // 🧠 AI Feature: Spending Pattern Analysis
+  async analyzeSpendingPattern(transactions: any[]) {
+    const prompt = `Analyze this user's spending history and recommend financial optimization strategies:
+    ${JSON.stringify(transactions, null, 2)}`;
+
+    return await this.aiAgent.queryExternalAgent(prompt, transactions);
+  }
+
+  // 🧠 AI Feature: Predict Future Wallet Trends
+  async predictWalletTrends(walletData: any) {
+    const prompt = `Given this wallet data, predict future balance trends, potential overspending risks, and savings opportunities:
+    ${JSON.stringify(walletData, null, 2)}`;
+
+    return await this.aiAgent.queryExternalAgent(prompt, walletData);
   }
 }

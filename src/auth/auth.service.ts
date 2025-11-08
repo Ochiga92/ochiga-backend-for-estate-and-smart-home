@@ -1,4 +1,3 @@
-// src/auth/auth.service.ts
 import {
   Injectable,
   UnauthorizedException,
@@ -11,13 +10,25 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { User } from '../user/entities/user.entity';
+import { AiAgent } from '../ai/ai.agent'; // 👈 integrated AI reasoning layer
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly jwtService: JwtService,
     private readonly userService: UserService,
+    private readonly aiAgent: AiAgent, // 👈 inject AI agent
   ) {}
+
+  /** 🧠 AI-assisted login behavior analysis */
+  async analyzeLoginActivity(logData: any) {
+    const prompt = `Analyze the following login attempts for any suspicious behavior, anomalies, or possible breaches:
+    ${JSON.stringify(logData, null, 2)}
+
+    Respond with a brief summary and risk level (low, medium, high).`;
+
+    return await this.aiAgent.queryExternalAgent(prompt, logData);
+  }
 
   /** Register a new user */
   async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
@@ -35,6 +46,12 @@ export class AuthService {
 
     const token = this.generateJwt(user);
 
+    // 🧠 Optional AI insight after registration
+    await this.aiAgent.queryExternalAgent(
+      `A new user just registered with email: ${user.email}. Analyze if the registration pattern seems normal or unusual.`,
+      { user },
+    );
+
     return {
       token,
       user: { id: user.id, email: user.email, role: user.role },
@@ -50,6 +67,14 @@ export class AuthService {
     if (!valid) throw new UnauthorizedException('Invalid credentials');
 
     const token = this.generateJwt(user);
+
+    // 🧠 Run AI security check on login
+    await this.analyzeLoginActivity({
+      userId: user.id,
+      email: user.email,
+      timestamp: new Date().toISOString(),
+      ip: loginDto.ipAddress || 'unknown',
+    });
 
     return {
       token,

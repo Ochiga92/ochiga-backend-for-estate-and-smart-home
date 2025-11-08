@@ -18,33 +18,40 @@ import { Estate } from './entities/estate.entity';
 export class EstateController {
   constructor(private readonly estateService: EstateService) {}
 
+  // ✅ Create a new estate
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() createEstateDto: CreateEstateDto): Promise<Estate> {
     return this.estateService.create(createEstateDto);
   }
 
+  // ✅ Retrieve all estates
   @Get()
   async findAll(): Promise<Estate[]> {
     return this.estateService.findAll();
   }
 
+  // ✅ Retrieve a single estate by ID
   @Get(':id')
   async findOne(@Param('id') id: string): Promise<Estate> {
-    return this.estateService.findOne(id); // ✅ id stays string
+    return this.estateService.findOne(id);
   }
 
+  // ✅ Update an estate by ID
   @Patch(':id')
   async update(
     @Param('id') id: string,
     @Body() updateEstateDto: UpdateEstateDto,
   ): Promise<Estate> {
-    return this.estateService.update(id, updateEstateDto); // ✅ id stays string
+    return this.estateService.update(id, updateEstateDto);
   }
 
+  // ✅ Delete an estate by ID (returns message + AI note)
   @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id') id: string): Promise<void> {
-    return this.estateService.remove(id); // ✅ id stays string
+  @HttpCode(HttpStatus.OK)
+  async remove(
+    @Param('id') id: string,
+  ): Promise<{ message: string; note?: string }> {
+    return this.estateService.remove(id);
   }
 }

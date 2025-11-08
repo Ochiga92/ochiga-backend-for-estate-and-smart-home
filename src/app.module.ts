@@ -1,11 +1,10 @@
-// src/app.module.ts
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit, Logger } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
-import * as path from 'path';
+import { getDatabaseConfig } from './config/database.config';
 
-// ✅ Core Feature Modules
+// ✅ Feature Modules
 import { AuthModule } from './auth/auth.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { UserModule } from './user/user.module';
@@ -19,65 +18,36 @@ import { UtilitiesModule } from './utilities/utilities.module';
 import { CommunityModule } from './community/community.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { HealthModule } from './health/health.module';
-import { MessageModule } from './message/message.module'; // ✅ Added this line
+import { MessageModule } from './message/message.module';
+import { IotModule } from './iot/iot.module';
+import { AiModule } from './ai/ai.module';
+import { AssistantModule } from './assistant/assistant.module'; // 👈 NEW — Smart Assistant layer
 
-// ✅ Global Guards
+// ✅ Guards & Filters
+import { APP_GUARD, APP_FILTER } from '@nestjs/core';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RolesGuard } from './auth/roles.guard';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 @Module({
   imports: [
-    // ✅ Environment Config
+    // 🌍 Global config
     ConfigModule.forRoot({ isGlobal: true }),
 
-    // ✅ Database Configuration
+    // 🗄️ Database
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: async (config: ConfigService) => {
-        const dbType = config.get<string>('DB_TYPE', 'better-sqlite3');
-
-        if (dbType === 'postgres') {
-          return {
-            type: 'postgres' as const,
-            host: config.get<string>('DB_HOST', 'localhost'),
-            port: parseInt(config.get<string>('DB_PORT', '5432'), 10),
-            username: config.get<string>('DB_USERNAME', 'postgres'),
-            password: config.get<string>('DB_PASSWORD', 'postgres'),
-            database: config.get<string>('DB_DATABASE', 'estate_app'),
-            entities: [path.join(__dirname, '**', '*.entity.{ts,js}')],
-            synchronize: true,
-          };
-        }
-
-        if (dbType === 'sqlite') {
-          return {
-            type: 'sqlite' as const,
-            database: path.resolve(
-              __dirname,
-              '..',
-              config.get<string>('DB_DATABASE', 'db.sqlite'),
-            ),
-            entities: [path.join(__dirname, '**', '*.entity.{ts,js}')],
-            synchronize: true,
-          };
-        }
-
-        // ✅ Default: better-sqlite3 (faster local DB)
+      useFactory: async () => {
+        const dbConfig = await getDatabaseConfig();
         return {
-          type: 'better-sqlite3' as const,
-          database: path.resolve(
-            __dirname,
-            '..',
-            config.get<string>('DB_DATABASE', 'db.sqlite'),
-          ),
-          entities: [path.join(__dirname, '**', '*.entity.{ts,js}')],
-          synchronize: true,
+          ...dbConfig,
+          autoLoadEntities: true,
+          entities: [__dirname + '/**/*.entity{.ts,.js}'],
         };
       },
     }),
 
-    // ✅ App Feature Modules
+    // 🧩 Core Application Modules
     AuthModule,
     DashboardModule,
     UserModule,
@@ -91,13 +61,31 @@ import { RolesGuard } from './auth/roles.guard';
     CommunityModule,
     NotificationsModule,
     HealthModule,
-    MessageModule, // ✅ Registered here
-  ],
+    MessageModule,
+    IotModule,
 
-  // ✅ Apply Global Guards
+    // 🤖 AI + Assistant Layer
+    AiModule,
+    AssistantModule, // 👈 Added here
+  ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_FILTER, useClass: HttpExceptionFilter },
   ],
 })
-export class AppModule {}
+export class AppModule implements OnModuleInit {
+  private readonly logger = new Logger(AppModule.name);
+
+  constructor(
+    private readonly config: ConfigService,
+    private readonly dataSource: DataSource,
+  ) {}
+
+  async onModuleInit() {
+    const entities = this.dataSource.entityMetadatas;
+    this.logger.log('🚀 --- Ochiga Smart Backend Boot Summary ---');
+    this.logger.log(`🧩 Entities: ${entities.map((e) => e.name).join(', ')}`);
+    this.logger.log('✅ System initialized and ready.\n');
+  }
+}

@@ -1,4 +1,3 @@
-// src/community/community.service.ts
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -6,6 +5,7 @@ import { Post } from './entities/post.entity';
 import { Group } from './entities/group.entity';
 import { Comment } from './entities/comment.entity';
 import { Message } from './entities/message.entity';
+import { AiAgent } from '../ai/ai.agent';
 
 @Injectable()
 export class CommunityService {
@@ -14,9 +14,18 @@ export class CommunityService {
     @InjectRepository(Group) private groupRepo: Repository<Group>,
     @InjectRepository(Comment) private commentRepo: Repository<Comment>,
     @InjectRepository(Message) private messageRepo: Repository<Message>,
+    private readonly aiAgent: AiAgent, // 🧠 Injected AI brain
   ) {}
 
-  // Posts
+  // 🧩 NEW: Added for AssistantService compatibility
+  async getEvents() {
+    return [
+      { id: 1, title: 'Monthly Estate Meeting', date: '2025-11-05' },
+      { id: 2, title: 'Maintenance Inspection', date: '2025-11-12' },
+    ];
+  }
+
+  // 📮 Posts
   createPost(data: Partial<Post>) {
     const post = this.postRepo.create(data);
     return this.postRepo.save(post);
@@ -33,7 +42,7 @@ export class CommunityService {
     return this.postRepo.save(post);
   }
 
-  // Comments
+  // 💬 Comments
   async addComment(postId: string, data: Partial<Comment>) {
     const post = await this.postRepo.findOneBy({ id: postId });
     if (!post) return null;
@@ -41,7 +50,7 @@ export class CommunityService {
     return this.commentRepo.save(comment);
   }
 
-  // Groups
+  // 👥 Groups
   createGroup(data: Partial<Group>) {
     const group = this.groupRepo.create(data);
     return this.groupRepo.save(group);
@@ -59,7 +68,7 @@ export class CommunityService {
     return this.groupRepo.save(group);
   }
 
-  // Messages
+  // 💌 Messages
   createMessage(data: Partial<Message>) {
     const msg = this.messageRepo.create(data);
     return this.messageRepo.save(msg);
@@ -73,5 +82,19 @@ export class CommunityService {
       ],
       order: { createdAt: 'ASC' },
     });
+  }
+
+  // 🧠 AI: Summarize community discussions
+  async summarizeCommunityFeedback(feedback: any[]) {
+    const prompt = `Summarize community discussions and highlight positive/negative sentiment:
+    ${JSON.stringify(feedback, null, 2)}`;
+    return await this.aiAgent.queryExternalAgent(prompt, feedback);
+  }
+
+  // 🧠 AI: Detect trends & potential conflicts
+  async detectCommunityTrends(posts: any[]) {
+    const prompt = `Analyze community posts to identify trending topics, shared concerns, and possible disputes:
+    ${JSON.stringify(posts, null, 2)}`;
+    return await this.aiAgent.queryExternalAgent(prompt, posts);
   }
 }

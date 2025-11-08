@@ -1,7 +1,5 @@
 // src/iot/iot.controller.ts
-import {
-  Controller, Get, Post, Param, Body, UseGuards, Request
-} from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, UseGuards, Req } from '@nestjs/common';
 import { IotService } from './iot.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -22,8 +20,8 @@ export class IotController {
 
   @Get('my-devices')
   @Roles(UserRole.RESIDENT)
-  getMyDevices(@Request() req: AuthenticatedRequest) {
-    return this.iotService.findUserDevices(req.user.id);
+  getMyDevices(@Req() { user }: AuthenticatedRequest) {
+    return this.iotService.findUserDevices(user.id);
   }
 
   @Get('estate-devices')
@@ -34,23 +32,31 @@ export class IotController {
 
   @Post('devices')
   @Roles(UserRole.RESIDENT, UserRole.MANAGER)
-  createDevice(@Request() req: AuthenticatedRequest, @Body() dto: CreateDeviceDto) {
-    return this.iotService.createDevice(req.user.id, req.user.role, dto);
+  createDevice(@Req() { user }: AuthenticatedRequest, @Body() dto: CreateDeviceDto) {
+    return this.iotService.createDevice(user.id, user.role, dto);
   }
 
   @Post('devices/:id/control')
   @Roles(UserRole.RESIDENT, UserRole.MANAGER)
   controlDevice(
-    @Request() req: AuthenticatedRequest,
+    @Req() { user }: AuthenticatedRequest,
     @Param('id') id: string,
     @Body() dto: ControlDeviceDto,
   ) {
-    return this.iotService.controlDevice(req.user.id, req.user.role, id, dto);
+    return this.iotService.controlDevice(user.id, user.role, id, dto);
   }
 
   @Get('devices/:id/logs')
   @Roles(UserRole.RESIDENT, UserRole.MANAGER)
-  getDeviceLogs(@Request() req: AuthenticatedRequest, @Param('id') id: string) {
-    return this.iotService.getDeviceLogs(req.user.id, req.user.role, id);
+  getDeviceLogs(@Req() { user }: AuthenticatedRequest, @Param('id') id: string) {
+    return this.iotService.getDeviceLogs(user.id, user.role, id);
+  }
+
+  // 🧠 NEW: Smart AI analysis endpoint
+  @Post('analyze')
+  @Roles(UserRole.MANAGER, UserRole.RESIDENT)
+  async analyzeIoT(@Body() sensorData: any) {
+    const reasoning = await this.iotService.analyzeWithAI(sensorData);
+    return { message: 'AI analyzed sensor data', reasoning };
   }
 }

@@ -1,25 +1,24 @@
-// src/iot/iot.gateway.ts
 import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server } from 'socket.io';
 
 @WebSocketGateway({ cors: true })
 export class IotGateway {
-  @WebSocketServer()
-  server!: Server;
+  @WebSocketServer() server!: Server;
 
-  /** Generic broadcaster */
+  /** Broadcasts any event globally */
   broadcast(event: string, payload: any) {
-    if (this.server) {
-      this.server.emit(event, payload);
-    }
+    this.server?.emit(event, payload);
   }
 
-  /** Notify device updates */
+  /** Estate-based room broadcasting (scalable) */
+  toEstate(estateId: string, event: string, payload: any) {
+    this.server?.to(`estate-${estateId}`).emit(event, payload);
+  }
+
   notifyDeviceUpdate(device: any) {
     this.broadcast('deviceUpdate', device);
   }
 
-  /** Notify device log */
   notifyLog(log: any) {
     this.broadcast('deviceLog', log);
   }

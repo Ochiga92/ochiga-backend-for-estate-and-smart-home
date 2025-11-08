@@ -9,6 +9,7 @@ import { JwtStrategy } from './jwt.strategy';
 import { UserModule } from '../user/user.module';
 import { TokenService } from './token.service';
 import { RefreshToken } from './entities/refresh-token.entity';
+import { AiModule } from '../ai/ai.module'; // 👈 added
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { RefreshToken } from './entities/refresh-token.entity';
       signOptions: { expiresIn: (process.env.JWT_ACCESS_EXPIRY as any) || '15m' },
     }),
     UserModule,
+    AiModule, // 👈 added
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, TokenService],

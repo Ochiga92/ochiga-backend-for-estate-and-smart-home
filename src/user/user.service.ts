@@ -1,15 +1,16 @@
-// src/user/user.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { UserRole } from '../enums/user-role.enum';
+import { AiAgent } from '../ai/ai.agent';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    private readonly aiAgent: AiAgent, // 🧠 Inject AI Agent
   ) {}
 
   /** ✅ Create new user */
@@ -98,5 +99,40 @@ export class UserService {
   /** 🔄 Alias for controller compatibility */
   async deleteUser(id: string): Promise<void> {
     return this.remove(id);
+  }
+
+  // 🧠 ---------------- AI-Powered Enhancements ---------------- //
+
+  /**
+   * 🔹 Personalize experience for a user
+   * Uses OpenAI reasoning via AiAgent to generate smart suggestions
+   */
+  async personalizeExperience(userProfile: any) {
+    const prompt = `You are a smart assistant helping personalize user experiences in a residential automation system.
+    Based on this user's profile, recommend possible actions, preferences, or automations:
+    ${JSON.stringify(userProfile, null, 2)}`;
+
+    const aiResponse = await this.aiAgent.queryExternalAgent(prompt, userProfile);
+    return {
+      userProfile,
+      aiRecommendation: aiResponse,
+    };
+  }
+
+  /**
+   * 🔹 AI summary for all residents
+   * Useful for admin dashboards to detect user trends or anomalies
+   */
+  async analyzeResidentPatterns() {
+    const users = await this.findAll();
+    const prompt = `Analyze the following residents' data and summarize key behavioral trends,
+    engagement rates, or potential issues:
+    ${JSON.stringify(users, null, 2)}`;
+
+    const aiSummary = await this.aiAgent.queryExternalAgent(prompt, users);
+    return {
+      totalUsers: users.length,
+      aiSummary,
+    };
   }
 }

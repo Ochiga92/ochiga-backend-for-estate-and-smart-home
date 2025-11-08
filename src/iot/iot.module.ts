@@ -1,16 +1,20 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { IotController } from './iot.controller';
 import { IotService } from './iot.service';
-import { Device } from './entities/device.entity';
-import { DeviceLog } from './entities/device-log.entity';
 import { IotGateway } from './iot.gateway';
 import { IotMqttService } from './iot.mqtt';
+import { IotController } from './iot.controller';
+import { Device } from './entities/device.entity';
+import { DeviceLog } from './entities/device-log.entity';
+import { AiModule } from '../ai/ai.module'; // 👈 added
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Device, DeviceLog])],
-  controllers: [IotController],
+  imports: [
+    TypeOrmModule.forFeature([Device, DeviceLog]),
+    AiModule, // 👈 keep this line
+  ],
   providers: [IotService, IotGateway, IotMqttService],
-  exports: [IotService],
+  controllers: [IotController],
+  exports: [IotService], // ✅ make IotService available to AssistantModule and others
 })
 export class IotModule {}

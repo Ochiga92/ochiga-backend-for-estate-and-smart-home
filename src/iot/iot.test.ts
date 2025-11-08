@@ -1,10 +1,5 @@
-// src/iot/iot.test.ts
+import { IotGateway } from './iot.gateway';
 import { IotMqttService } from './iot.mqtt';
 
-async function testPublish() {
-  const mqtt = new IotMqttService();
-  mqtt.publish('devices/test-device/toggle', { isOn: true });
-  console.log('Message published to AWS IoT!');
-}
-
-testPublish();
+const gateway = new IotGateway(); // or however it’s normally instantiated
+const matt = new IotMqttService(gateway);

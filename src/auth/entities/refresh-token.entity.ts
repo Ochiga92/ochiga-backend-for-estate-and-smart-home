@@ -1,4 +1,3 @@
-// src/auth/entities/refresh-token.entity.ts
 import {
   Entity,
   Column,
@@ -30,8 +29,12 @@ export class RefreshToken {
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 
-  // FIXED: compatible with SQLite + PostgreSQL
-  @Column({ name: 'expires_at', type: 'datetime', nullable: true })
+  // ✅ FIXED: Compatible with PostgreSQL and SQLite
+  @Column({
+    name: 'expires_at',
+    type: process.env.DB_TYPE === 'postgres' ? 'timestamp' : 'datetime',
+    nullable: true,
+  })
   expiresAt?: Date | null;
 
   @Column({ default: false })

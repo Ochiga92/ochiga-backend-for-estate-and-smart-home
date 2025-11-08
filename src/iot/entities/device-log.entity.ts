@@ -16,11 +16,25 @@ export class DeviceLog {
   @ManyToOne(() => Device, (device) => device.logs, { onDelete: 'CASCADE' })
   device!: Device;
 
+  /**
+   * Action performed — e.g. "on", "off", "dim", "lock", "unlock"
+   */
   @Column()
-  action!: string; // "on", "off", "set-temp"
+  action!: string;
 
-  @Column({ nullable: true })
-  details?: string; // extra info e.g. temp=22
+  /**
+   * Flexible details field:
+   * Stores JSON in Postgres (`jsonb`) or simple JSON text in SQLite.
+   * Ideal for logs containing sensor data, device states, etc.
+   */
+  @Column({
+    type:
+      (process.env.DB_TYPE || '').toLowerCase().includes('postgres')
+        ? 'jsonb'
+        : 'simple-json',
+    nullable: true,
+  })
+  details?: Record<string, any> | null;
 
   @CreateDateColumn()
   createdAt!: Date;
