@@ -1,6 +1,5 @@
-// src/auth/jwt.strategy.ts
 import { Injectable } from '@nestjs/common';
-import { PassportStrategy } from '@nestjs/passport';
+import { PassportStrategy } from '@nestjs/passport'; // ✅ Correct spelling
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { JwtPayload } from './types';
 
