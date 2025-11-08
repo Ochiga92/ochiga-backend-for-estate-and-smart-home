@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { PassportStrategy } from '@nestjs/passport'; // ✅ Correct spelling
+import { PassportStrategy } from '@nestjs/passport'; // ✅ correct
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { JwtPayload } from './types';
 
 @Injectable()
-export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
+export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor() {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
